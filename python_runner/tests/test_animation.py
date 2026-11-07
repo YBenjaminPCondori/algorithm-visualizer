@@ -15,6 +15,7 @@ def run_traced(code=None, inputs=None, max_events=250):
     if inputs is not None:
         req['invocation']['args'] = inputs
     req['trace'] = {'enabled': True, 'maxEvents': max_events}
+    req['limits'] = {'wallTimeMs': 8000}  # allow slow local interpreter startup under load
     proc = subprocess.run([sys.executable, str(BASE / 'run.py')], input=json.dumps(req),
                           capture_output=True, text=True, timeout=12)
     return proc.returncode, json.loads(proc.stdout)
@@ -34,8 +35,10 @@ def replay(commands):
         else:
             chunks[-1].append(command)
     if not chunks[-1]:
-        raise AssertionError('trailing empty chunk')
-    assert len(chunks) == len(line_numbers) + 1
+        chunks.pop()
+    if not chunks[-1]:
+        raise AssertionError('missing final visualisation chunk')
+    assert len(chunks) in (len(line_numbers), len(line_numbers) + 1)
     for chunk in chunks:
         for command in chunk:
             key, name, args = command['key'], command['method'], command['args']
@@ -69,7 +72,7 @@ class AnimationTests(unittest.TestCase):
         self.assertTrue(any(e['kind'] == 'container_write' for e in events))
         self.assertTrue(any(e['state']['heap'] for e in events))
         self.assertTrue(any(e['sourceLine'] == 8 for e in events))
-        self.assertEqual(len(resp['commands']), 21)
+        self.assertEqual(len(resp['commands']), 22)
         objects = replay(resp['commands'])
         self.assertEqual(objects['nums']['value'], [2, 7, 11, 15])
         self.assertEqual(objects['seen']['value'], [[2, 0]])
@@ -127,6 +130,24 @@ class AnimationTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 1)
         self.assertEqual(json.loads(proc.stdout)['error']['code'], 'INVALID_REQUEST')
 
+    def test_renderer_safe_for_nested_dictionary_values(self):
+        source = '''class Solution:
+    def twoSum(self, nums, target):
+        seen = {}
+        for i, number in enumerate(nums):
+            complement = target - number
+            if complement in seen:
+                return [seen[complement][0], i]
+            seen[number] = [i]
+        return []
+'''
+        code, resp = run_traced(code=source)
+        self.assertEqual(code, 0, resp)
+        objects = replay(resp['commands'])
+        self.assertEqual(objects['answer']['value'], [0, 1])
+        self.assertEqual(objects['seen']['value'][0][0], 2)
+        self.assertTrue(objects['seen']['value'][0][1].startswith('<obj-'))
+
     def test_nonfinite_trace_input(self):
         # The JSON protocol validates input type, but renderer allows only finite numeric values.
         code, resp = run_traced(inputs=[[2, -7, 11, 15], 4])
@@ -137,6 +158,7 @@ class AnimationTests(unittest.TestCase):
         _, resp = run_traced()
         delays = [c['args'][0] for c in resp['commands'] if c['method'] == 'delay']
         self.assertEqual(delays[0], resp['trace']['events'][0]['sourceLine'] - 1)
+        self.assertEqual(delays[-1], resp['trace']['events'][-1]['sourceLine'] - 1)
 
 
 if __name__ == '__main__':

@@ -106,7 +106,7 @@ const TracerApi = {
       contractVersion: '1.0.0',
       source: { filename: 'solution.py', text: code },
       invocation: { className: 'Solution', method: 'twoSum', args },
-      limits: { wallTimeMs: 2000 },
+      limits: { wallTimeMs: 5000 },
     },
     { cancelToken },
   ).then(response => response.commands),

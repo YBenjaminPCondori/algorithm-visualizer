@@ -126,7 +126,7 @@ python -m unittest discover -s python_runner/tests -v
 
 The Python unit suite includes existing Two Sum and Add Two Numbers tests,
 contract validation, adapter replay simulation, and trace limit cases.
-A local HTTP smoke test verifies the 200 response, CORS and the 21 commands
+Automated local HTTP tests verify successful responses, CORS restrictions, validation errors, and the 22 commands
 for the standard Two Sum example. **An actual React browser smoke test and
 a legacy npm build have not yet been run in this environment.**
 
@@ -138,3 +138,15 @@ a legacy npm build have not yet been run in this environment.**
   snapshots, maximum 256 array values and maximum 250 events by default.
 - No dependency upgrades; `package.json` and `package-lock.json`
   are unchanged. Other language pathways remain as before.
+
+### Integration hardening
+
+The Two Sum adapter now adds a final source-line marker so the final
+`return` remains highlighted on playback. The Python player trims the
+trailing empty playback chunk while leaving other language paths unchanged.
+Restart is disabled until visualisation commands are available. The React
+API uses a 5-second timeout to tolerate slower local Python startup.
+
+Tests run the real localhost HTTP server with an ephemeral test port,
+including CORS and invalid-input responses. The legacy Node/browser
+UI still requires a manual smoke test on a machine with the app installed.

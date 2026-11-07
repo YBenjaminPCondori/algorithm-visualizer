@@ -41,7 +41,7 @@ class Player extends BaseComponent {
     }
   }
 
-  reset(commands = []) {
+  reset(commands = [], trimTrailingDelay = false) {
     const chunks = [{
       commands: [],
       lineNumber: undefined,
@@ -59,6 +59,12 @@ class Player extends BaseComponent {
       } else {
         chunks[chunks.length - 1].commands.push(command);
       }
+    }
+    // Python's adapter annotates the final return; discard the empty
+    // chunk created after its terminal delay to retain that line highlight.
+    if (trimTrailingDelay && chunks.length > 1 &&
+        chunks[chunks.length - 1].commands.length === 0) {
+      chunks.pop();
     }
     this.props.setChunks(chunks);
     this.props.setCursor(0);
@@ -95,14 +101,22 @@ class Player extends BaseComponent {
         .then(commands => {
           this.tracerApiSource = null;
           this.setState({ building: false });
-          this.reset(commands);
-          this.next();
+          this.reset(commands, ext === 'py');
+          // Avoid reading potentially stale Redux-connected props immediately
+          // after replacing the playback command list.
+          this.props.setCursor(1);
         })
         .catch(error => {
           if (axios.isCancel(error)) return;
           this.tracerApiSource = null;
           this.setState({ building: false });
-          this.handleError(error);
+          const response = error.response && error.response.data;
+          const detail = response && response.error;
+          if (ext === 'py' && detail && typeof detail.message === 'string') {
+            this.props.showErrorToast(detail.message);
+          } else {
+            this.handleError(error);
+          }
         });
     } else {
       this.setState({ building: false });
@@ -189,7 +203,7 @@ class Player extends BaseComponent {
         }
         {
           isPython &&
-          <Button primary disabled={!chunks.length} onClick={() => {
+          <Button primary disabled={!chunks.length || !chunks[0].commands.length} onClick={() => {
             this.pause();
             this.props.setCursor(1);
           }}>Restart</Button>

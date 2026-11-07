@@ -36,6 +36,15 @@ def choose_index(locals_, length):
     return None
 
 
+def display_value(value):
+    """Only pass React-renderable scalar values to the legacy table renderer."""
+    if value is None or type(value) in (bool, int, float, str):
+        return value
+    if isinstance(value, dict) and set(value) == {'$ref'}:
+        return '<' + str(value['$ref']) + '>'
+    raise ValueError('unsupported visualisation value')
+
+
 def adapt_two_sum(trace, result):
     if trace.get('schemaVersion') != '1.0.0' or trace.get('status') != 'completed':
         raise ValueError('unsupported trace version/status')
@@ -76,7 +85,7 @@ def adapt_two_sum(trace, result):
         if dicts:
             table = dicts[0][1]
             if table != prior_dict:
-                out.append(cmd('seen', 'set', table))
+                out.append(cmd('seen', 'set', [[display_value(v) for v in pair] for pair in table]))
                 prior_dict = [list(pair) for pair in table]
         current_index = choose_index(locals_, len(nums))
         if current_index != selected:
@@ -87,11 +96,10 @@ def adapt_two_sum(trace, result):
             selected = current_index
         if event['kind'] == 'return':
             out.append(cmd('answer', 'set', result))
-        if step != len(events) - 1:
-            source_line = event['sourceLine']
-            if type(source_line) is not int or source_line < 1:
-                raise ValueError('invalid line number')
-            out.append(cmd(None, 'delay', source_line - 1))
+        source_line = event['sourceLine']
+        if type(source_line) is not int or source_line < 1:
+            raise ValueError('invalid line number')
+        out.append(cmd(None, 'delay', source_line - 1))
     if events[-1]['kind'] != 'return':
         raise ValueError('missing return event')
     if len(out) > 1500:
