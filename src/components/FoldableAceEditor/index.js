@@ -4,6 +4,7 @@ import 'brace/mode/plain_text';
 import 'brace/mode/markdown';
 import 'brace/mode/json';
 import 'brace/mode/javascript';
+import 'brace/mode/python';
 import 'brace/mode/c_cpp';
 import 'brace/mode/java';
 import 'brace/theme/tomorrow_night_eighties';
