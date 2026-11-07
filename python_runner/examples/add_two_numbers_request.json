@@ -1,0 +1,26 @@
+{
+  "contractVersion": "1.0.0",
+  "source": {
+    "filename": "solution.py",
+    "text": "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def addTwoNumbers(self, l1: Optional[ListNode], l2: Optional[ListNode]) -> Optional[ListNode]:\n        head = ListNode(0)\n        tail = head\n        carry = 0\n        while l1 is not None or l2 is not None or carry != 0:\n            d1 = l1.val if l1 is not None else 0\n            d2 = l2.val if l2 is not None else 0\n            total = d1 + d2 + carry\n            tail.next = ListNode(total % 10)\n            carry = total // 10\n            tail = tail.next\n            l1 = l1.next if l1 is not None else None\n            l2 = l2.next if l2 is not None else None\n        return head.next\n"
+  },
+  "invocation": {
+    "className": "Solution",
+    "method": "addTwoNumbers",
+    "args": [
+      [
+        2,
+        4,
+        3
+      ],
+      [
+        5,
+        6,
+        4
+      ]
+    ]
+  },
+  "limits": {
+    "wallTimeMs": 2000
+  }
+}

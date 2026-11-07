@@ -1,4 +1,4 @@
-"""P3-01 LeetCode Python runner: validated JSON stdin -> isolated worker -> JSON stdout.
+"""P3-02 LeetCode Python runner: validated JSON stdin -> isolated worker -> JSON stdout.
 
 Execution is for locally trusted code. A subprocess plus restricted builtins is NOT a sandbox.
 """
@@ -50,16 +50,24 @@ def validate_request(req):
         raise ValueError("invocation must be an object")
     if invocation.get("className") != "Solution":
         raise ValueError("invocation.className must be 'Solution'")
-    if invocation.get("method") != "twoSum":
-        raise ValueError("P3-01 only supports invocation.method='twoSum'")
+    method = invocation.get("method")
+    if method not in ("twoSum", "addTwoNumbers"):
+        raise ValueError("P3-02 supports only invocation.method=twoSum or addTwoNumbers")
     args = invocation.get("args")
     if not isinstance(args, list) or len(args) != 2:
         raise ValueError("invocation.args must contain [nums, target]")
-    nums, target = args
-    if not isinstance(nums, list) or not all(type(x) is int for x in nums):
-        raise TypeError("nums must be a JSON array of integers")
-    if type(target) is not int:
-        raise TypeError("target must be a JSON integer")
+    first, second = args
+    if method == "twoSum":
+        if not isinstance(first, list) or not all(type(x) is int for x in first):
+            raise TypeError("nums must be a JSON array of integers")
+        if type(second) is not int:
+            raise TypeError("target must be a JSON integer")
+    else:
+        for name, digits in zip(("l1", "l2"), (first, second)):
+            if not isinstance(digits, list) or len(digits) > 1000 or not all(
+                type(d) is int and 0 <= d <= 9 for d in digits
+            ):
+                raise TypeError(f"{name} must be an array of at most 1000 digits in 0..9")
     limits = req.get("limits", {})
     if not isinstance(limits, dict):
         raise ValueError("limits must be an object")
