@@ -9,6 +9,9 @@ import inspect
 import io
 import json
 import sys
+import os
+sys.path.insert(0, os.path.dirname(__file__))
+from tracing import TraceRecorder, TraceLimit, UnsupportedTraceValue
 import traceback
 import typing
 
@@ -161,7 +164,21 @@ def run(req):
                 inspect.signature(method).bind(*args)
             except (ValueError, TypeError):
                 return error("UNSUPPORTED_SIGNATURE", "Solution." + method_name + " does not accept two inputs", "validation")
-            value = method(*args)
+            trace_requested = req.get('trace', {}).get('enabled', False)
+            recorder = TraceRecorder(method.__func__.__code__, req['trace'].get('maxEvents', 250)) if trace_requested else None
+            if recorder:
+                sys.settrace(recorder.trace)
+            try:
+                value = method(*args)
+            finally:
+                if recorder:
+                    sys.settrace(None)
+    except TraceLimit as exc:
+        response = error("EVENT_LIMIT", str(exc), "execution")
+        response['status'] = 'limited'
+        return response
+    except UnsupportedTraceValue as exc:
+        return error("UNSUPPORTED_VALUE", str(exc), "execution")
     except BaseException as exc:
         return error("RUNTIME_EXCEPTION", f"{type(exc).__name__}: {exc}", "execution", source_line(exc))
 
@@ -179,7 +196,10 @@ def run(req):
             raise ValueError("result too large")
     except (TypeError, ValueError):
         return error("SERIALIZATION_ERROR", "Result is not serializable", "serialization")
-    return {"contractVersion": VERSION, "status": "completed", "result": result, "error": None}
+    response = {"contractVersion": VERSION, "status": "completed", "result": result, "error": None}
+    if recorder:
+        response['trace'] = recorder.envelope(req)
+    return response
 
 
 def main():

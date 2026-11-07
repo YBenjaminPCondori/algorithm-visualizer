@@ -1,6 +1,6 @@
-# Python LeetCode runner (P3-02)
+# Python LeetCode runner + Two Sum animation MVP
 
-A standalone **Python CLI**, with **no external Python dependencies**. It executes locally trusted, unmodified `class Solution` code using JSON input/output. This does **not** yet integrate with the React visualiser or produce trace events.
+A standalone **Python CLI**, with **no external Python dependencies**. It executes locally trusted, unmodified `class Solution` code using JSON input/output. Two Sum now also supports opt-in execution tracing, an existing-format command adapter, and a local HTTP bridge for the React visualiser. Add Two Numbers execution remains unchanged; its animation is out of scope.
 
 ## Supported methods
 
@@ -58,5 +58,83 @@ Failures have `status: "failed"` and `error: {code, message, phase, sourceLine}`
 
 - **Not a security sandbox.** It must only be used with locally trusted code. Restricted imports/dunder filtering and child process wall-time termination are not sufficient protections against hostile Python code; there are no CPU/memory/filesystem/network quotas or process-tree containment.
 - Supports only the two named methods, with deliberately narrow JSON input and output types. Source code is compiled **unchanged** (not rewritten to add instrumentation).
-- No execution trace, AST/line-event capture, hash-table or linked-list visualisation, AI model, HTTP endpoint, Node.js package modification or UI integration.
+- Two Sum now supports observed post-line snapshots, array/hash-table/result commands, and a localhost HTTP endpoint. Linked-list **animation**, AI explanations and a secure public sandbox are not implemented. No Node package modifications.
 - The tool preserves the original front-end and lockfile. Tracing begins in a later phase.
+
+## Two Sum animation MVP
+
+The animation reuses the existing `Array1DTracer`, `Array2DTracer`,
+`VerticalLayout`, `Player` and `VisualizationViewer`; it does **not**
+replace the rendering engine. Tracer snapshots represent actual completed
+Python source lines; they do not expose every intermediate dictionary lookup
+or arbitrary Python operation. A selection is shown when the loop variable is
+named `index`, `i`, `idx`, `pos` or `j`.
+
+### Start locally
+
+Open **two terminals** in the repository root.
+
+Terminal 1 — start the Python trace service (Python 3.8+):
+
+```powershell
+python python_runner/server.py
+```
+
+Confirm http://127.0.0.1:8765/health displays `status: ok`.
+
+Terminal 2 — run the *existing* React development app using a compatible
+Node.js version and its currently locked dependencies:
+
+```powershell
+npm.cmd start
+```
+
+At http://localhost:3000: choose **Python** in the language menu,
+select **Scratch Paper → New ...**, and open the `code.py` tab.
+Paste an ordinary `class Solution` / `twoSum` implementation without
+any tracer modifications. Enter test arguments in the JSON input field,
+for example `[[2,7,11,15],9]`. Click **Build**, then use
+**Play**, **Pause**, **previous**, **next** and **Restart**.
+
+The Python HTTP endpoint uses `127.0.0.1:8765` and accepts only
+browser origins `localhost:3000` or `127.0.0.1:3000`.
+Existing legacy back-end APIs still use the original React proxy at
+`localhost:8080`. Without the optional original server, the algorithm
+catalogue may show a loading error even when the Python animation path works.
+
+The text input is positional `[nums, target]`. For example:
+`[[3,3],6]` and `[[-3,4,3,90],0]`.
+
+### API
+
+`POST http://127.0.0.1:8765/api/tracers/py` with the existing
+request envelope for `Solution.twoSum` (trace mode is enabled by
+the local server). Response includes `result`, `trace` (RFC v1 full
+post-line snapshots) and `commands` (existing `{key,method,args}` format).
+
+For CLI usage, add `"trace": {"enabled": true, "maxEvents": 250}`
+to a Two Sum request. Example:
+```powershell
+Get-Content -Raw python_runner/examples/two_sum_animation_request.json | python python_runner/run.py
+```
+
+### Validation
+
+```powershell
+python -m unittest discover -s python_runner/tests -v
+```
+
+The Python unit suite includes existing Two Sum and Add Two Numbers tests,
+contract validation, adapter replay simulation, and trace limit cases.
+A local HTTP smoke test verifies the 200 response, CORS and the 21 commands
+for the standard Two Sum example. **An actual React browser smoke test and
+a legacy npm build have not yet been run in this environment.**
+
+### Limits and security
+
+- **Not a sandbox:** only use trusted local code. Process isolation and
+  timeout do not prevent all filesystem/network or process-tree abuse.
+- The animation only covers the Two Sum family with supported list/dict
+  snapshots, maximum 256 array values and maximum 250 events by default.
+- No dependency upgrades; `package.json` and `package-lock.json`
+  are unchanged. Other language pathways remain as before.

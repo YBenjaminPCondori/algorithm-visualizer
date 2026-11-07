@@ -21,6 +21,7 @@ class Player extends BaseComponent {
       speed: 2,
       playing: false,
       building: false,
+      testInput: '[[2,7,11,15],9]',
     };
 
     this.tracerApiSource = null;
@@ -74,8 +75,23 @@ class Player extends BaseComponent {
     this.setState({ building: true });
 
     const ext = extension(file.name);
+    const request = { code: file.content };
+    if (ext === 'py') {
+      try {
+        const args = JSON.parse(this.state.testInput);
+        if (!Array.isArray(args) || args.length !== 2) {
+          throw new Error('Expected [nums, target]');
+        }
+        request.args = args;
+      } catch (error) {
+        this.tracerApiSource = null;
+        this.setState({ building: false });
+        this.handleError(new Error('Two Sum input must be JSON: [[2,7,11,15],9]'));
+        return;
+      }
+    }
     if (ext in TracerApi) {
-      TracerApi[ext]({ code: file.content }, undefined, this.tracerApiSource.token)
+      TracerApi[ext](request, undefined, this.tracerApiSource.token)
         .then(commands => {
           this.tracerApiSource = null;
           this.setState({ building: false });
@@ -147,10 +163,19 @@ class Player extends BaseComponent {
     const { className } = this.props;
     const { editingFile } = this.props.current;
     const { chunks, cursor } = this.props.player;
-    const { speed, playing, building } = this.state;
+    const { speed, playing, building, testInput } = this.state;
+    const isPython = editingFile && extension(editingFile.name) === 'py';
 
     return (
       <div className={classes(styles.player, className)}>
+        {
+          isPython &&
+          <input type="text" aria-label="Two Sum test input JSON"
+                 title="Two Sum inputs: [nums, target]"
+                 value={testInput}
+                 onChange={e => this.setState({ testInput: e.target.value })}
+                 style={{ width: 176, marginRight: 8, padding: '5px' }}/>
+        }
         <Button icon={faWrench} primary disabled={building} inProgress={building}
                 onClick={() => this.build(editingFile)}>
           {building ? 'Building' : 'Build'}
@@ -161,6 +186,13 @@ class Player extends BaseComponent {
           ) : (
             <Button icon={faPlay} primary onClick={() => this.resume(true)}>Play</Button>
           )
+        }
+        {
+          isPython &&
+          <Button primary disabled={!chunks.length} onClick={() => {
+            this.pause();
+            this.props.setCursor(1);
+          }}>Restart</Button>
         }
         <Button icon={faChevronLeft} primary disabled={!this.isValidCursor(cursor - 1)} onClick={() => this.prev()}/>
         <ProgressBar className={styles.progress_bar} current={cursor} total={chunks.length}

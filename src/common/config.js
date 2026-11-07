@@ -1,6 +1,11 @@
-import { CODE_CPP, CODE_JAVA, CODE_JS } from 'files';
+import { CODE_CPP, CODE_JAVA, CODE_JS, CODE_PY } from 'files';
 
 const languages = [{
+  name: 'Python',
+  ext: 'py',
+  mode: 'python',
+  skeleton: CODE_PY,
+}, {
   name: 'JavaScript',
   ext: 'js',
   mode: 'javascript',

@@ -1,0 +1,26 @@
+{
+  "contractVersion": "1.0.0",
+  "source": {
+    "filename": "solution.py",
+    "text": "class Solution(object):\n    def twoSum(self, nums, target_value):\n        nums_hash_table = {}\n        for index, num_value in enumerate(nums):\n            complement = target_value - num_value\n            if complement in nums_hash_table:\n                return [nums_hash_table.get(complement), index]\n            nums_hash_table[num_value] = index\n        return []\n"
+  },
+  "invocation": {
+    "className": "Solution",
+    "method": "twoSum",
+    "args": [
+      [
+        2,
+        7,
+        11,
+        15
+      ],
+      9
+    ]
+  },
+  "limits": {
+    "wallTimeMs": 2000
+  },
+  "trace": {
+    "enabled": true
+  }
+}

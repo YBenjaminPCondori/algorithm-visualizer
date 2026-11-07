@@ -68,6 +68,17 @@ def validate_request(req):
                 type(d) is int and 0 <= d <= 9 for d in digits
             ):
                 raise TypeError(f"{name} must be an array of at most 1000 digits in 0..9")
+    trace_options = req.get('trace', {})
+    if not isinstance(trace_options, dict) or type(trace_options.get('enabled', False)) is not bool:
+        raise ValueError('trace.enabled must be a boolean')
+    if trace_options.get('enabled', False):
+        if method != 'twoSum':
+            raise ValueError('Tracing is currently supported for Two Sum only')
+        count = trace_options.get('maxEvents', 250)
+        if type(count) is not int or not (1 <= count <= 500):
+            raise ValueError('trace.maxEvents must be an integer from 1 to 500')
+        if len(first) > 256:
+            raise ValueError('Traced arrays cannot exceed 256 elements')
     limits = req.get("limits", {})
     if not isinstance(limits, dict):
         raise ValueError("limits must be an object")
@@ -113,6 +124,12 @@ def execute_request(req):
             raise ValueError("invalid worker status")
     except (ValueError, json.JSONDecodeError):
         response = failure("INTERNAL_ERROR", "Python worker failed to return a valid response", phase="internal")
+    if req.get('trace', {}).get('enabled') and response.get('status') == 'completed':
+        from adapter import adapt_two_sum
+        try:
+            response['commands'] = adapt_two_sum(response['trace'], response['result'])
+        except (ValueError, KeyError, TypeError) as exc:
+            response = failure('INTERNAL_ERROR', 'Trace adaptation failed: ' + str(exc), phase='adapter')
     response["sourceSha256"] = digest
     return response
 

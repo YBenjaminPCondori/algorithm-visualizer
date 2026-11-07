@@ -100,6 +100,16 @@ const TracerApi = {
     };
     worker.postMessage(code);
   }),
+  py: ({ code, args }, params, cancelToken) => axios.post(
+    'http://127.0.0.1:8765/api/tracers/py',
+    {
+      contractVersion: '1.0.0',
+      source: { filename: 'solution.py', text: code },
+      invocation: { className: 'Solution', method: 'twoSum', args },
+      limits: { wallTimeMs: 2000 },
+    },
+    { cancelToken },
+  ).then(response => response.commands),
   cpp: POST('/tracers/cpp'),
   java: POST('/tracers/java'),
 };
