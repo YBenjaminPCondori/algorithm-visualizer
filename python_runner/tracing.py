@@ -1,4 +1,4 @@
-"""Deterministic post-line snapshots for the Two Sum animation MVP.
+"""Deterministic post-line snapshots for the Two Sum problem, which will be animated.
 
 The trace uses the v1 RFC envelope and observes only the selected
 Solution.twoSum code object. Submitted source code is never rewritten.
@@ -7,10 +7,10 @@ The recorder tracks local variables and supported heap objects to produce
 state snapshots for the existing algorithm-animation adapter.
 """
 
-import hashlib
+import hashlib # Hash Library for hashmaps
 import math
 import sys
-import uuid
+import uuid # Unique identifier generator for run IDs
 
 
 class TraceLimit(Exception):
